@@ -1,3 +1,4 @@
+
 function log(message){
    try{
       console.log(message);
@@ -15,12 +16,14 @@ function canvasSupport () {
 }
 
 function canvasApp() {
+   var theCanvas;
+   var context;
    if (!canvasSupport()) {
       return;
    }
    else {
-      var theCanvas = document.getElementById("canvas");
-      var context = theCanvas.getContext("2d");
+      theCanvas = document.getElementById("canvas");
+      context = theCanvas.getContext("2d");
    }
 
    theCanvas.addEventListener("mousemove",onMouseMove, false);
@@ -28,10 +31,6 @@ function canvasApp() {
 
    var tileSheet = new Image();
    var counter = 0;
-   var posX = 50;
-   var posY = 50;
-   var dx = 0;
-   var dy = -1;
 
    var mouseX;
    var mouseY;
@@ -162,11 +161,9 @@ function canvasApp() {
          for (x = 0; x < this.width; x++){
             cell = this.cells[y][x];
             if (x < (this.width - 1)){
-               //cell.right = this.cells[y][x + 1];
                edges.push( new InputEdge(cell, Point.RIGHT));
             }
             if (y < (this.height - 1)){
-               //cell.down = this.cells[y + 1][x];
                edges.push(new InputEdge(cell,Point.DOWN));
             }
          }
@@ -199,30 +196,71 @@ function canvasApp() {
          for (x = 0; x < this.width; x++){
             cell = this.cells[y][x];
             line +=  "" + x; 
-            if (cell.right){
-               line += "|";
-            }else {
-               line += " ";
-            }
-         }
-         log(y + ":" + line);
-         //print boundary line
-         line = "";
-         for (x = 0; x < this.width; x++){
-            cell = this.cells[y][x];
-            if (cell.down){
-               line += "  ";
-            }else {
-               line += "--";
-            }
+            line += (cell.right) ? "-" : "#";
+            line += (cell.bottom) ? "." : "_";
          }
          log(y + ":" + line);
       }
    }
 
 
-   iMaze = new InputMaze(5,5);
+   var iMaze = new InputMaze(5,5);
    iMaze.print();
+
+   /*---------------------------------------------------------------
+    * TombCell class
+    */
+   function TombCell(x,y){
+      Point.call(this,x,y);
+      this.contents = Tomb.EMPTY;
+   }
+   TombCell.prototype = Object.create(Point.prototype);
+   TombCell.prototype.constructor = TombCell;
+
+
+   /*---------------------------------------------------------------
+    * Tomb class
+    */
+   function Tomb( inputMaze){
+      var x,y,iy,ix,cellRow;
+      this.width = (inputMaze.width * 2) + 1;
+      this.height = (inputMaze.height * 2) + 1;
+      this.cells = []
+
+      for (y = 0; y < this.height; y++){
+         cellRow = [];
+         for (x = 0; x < this.width; x++){
+            cell = new TombCell(x,y);
+            if (x == 0 || x == (inputMaze.width * 2) || y == 0 || y == (inputMaze.height * 2)){
+               cell.contents = Tomb.WALL;
+            }else if ((x % 2) == 1 && (y % 2) == 1){
+               null;
+            }else if ((x % 2) == 1 && (y % 2) == 0){
+               iy = (y - 2) / 2;
+               ix = (x - 1) / 2;
+               if (!(inputMaze.cells[iy][ix].down)){
+                  cell.contents = Tomb.WALL;
+               }
+            }else if ((x % 2) == 0 && (y % 2) == 1){
+               iy = (y - 1) / 2;
+               ix = (x - 2) / 2;
+               if (!(inputMaze.cells[iy][ix].right)){
+                  cell.contents = Tomb.WALL;
+               }
+            }else {
+               cell.contents = Tomb.WALL;
+            }
+            cellRow.push(cell);
+         }
+         this.cells.push( cellRow);
+      }
+   }
+
+   Tomb.EMPTY = 0;
+   Tomb.WALL = 1;
+
+
+   var tomb = new Tomb( iMaze);
 
    /*---------------------------------------------------------------
     */
@@ -252,28 +290,27 @@ function canvasApp() {
 
 
    function drawScreen() {
+      var x, y, posX, posY, tileRow, tileCol;
       context.fillStyle = '#aaaaaa';
-      context.fillRect(0,0, 500, 500);
-      context.drawImage(tileSheet, counter * 32, 0, 32, 32,posX,posY,32,32);
-      context.drawImage(tileSheet, counter * 32, 32, 32, 32,posX + 64,posY,32,32);
+      context.fillRect(0,0, theCanvas.width, theCanvas.height);
+
+      for (y = 0; y < tomb.height; y++){
+         for (x = 0; x < tomb.width; x++){
+            tileRow = (tomb.cells[y][x].contents == Tomb.WALL)? 32 : 0;
+            posX = x * 32;
+            posY = y * 32;
+            tileCol = 0;
+            context.drawImage(tileSheet, tileCol, tileRow, 32, 32,posX,posY,32,32);
+         }
+      }
+
+
 
       context.fillStyle = '#000000';
       context.font = '20px sans-serif';
       context.textBaseline = 'top';
-      context.fillText(theText, 200, 0);
+      context.fillText(theText, 400, 0);
          
-      counter++;
-      counter %= 3;
-
-      posY += dy;
-      posX += dx;
-      if (posY < 0){
-         posY = 500;
-      }
-      if (posX < 0){
-         posX = 500;
-      }
-
 
    }
 }
