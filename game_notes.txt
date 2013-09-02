@@ -1,0 +1,11 @@
+
+Player will start each level with four characters, one for each class: (fighter, wizard, etc.)
+
+The tomb is randomly generated and starts out with all squares hidden. As the player moves the characters around 
+more of the tomb will be revealed. The object is to find 3 keys which when picked up by the characters
+will complete the level (and send the characters to the next level).
+
+Each character will have unique attributes:
+- how far it can move
+- what squares it will reveal
+- how it deals with enemies
