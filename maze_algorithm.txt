@@ -1,0 +1,47 @@
+
+This will be done in 2 steps, step 1 to generate the map via Kruskal's algorithm, and step 1 to expand the map.  This is due to the fact that the finished maze will have walls that are 1 cell in width (rather than 0-width walls between cells). Any maze algorithm could be substituted into part 1.
+
+Part 1  (Kruskal's algorithm)
+1. Create a set of all the (internal) edges in the grid.
+2. Randomly pick an edge. If the edge connects two cells that are not
+   already connected, connect those cells (i.e. those cells' networks).
+   If the cells are already connected, throw the edge away.
+3. Repeat until no edges are left.
+
+Part 2
+Insert a row between each row created in part 1, and a column
+between each column  created in part 1.
+
+1. Create a new grid of dimensions (2w + 1) x (2h + 1)
+   to get from the new cell coordinates to the original:
+      x1 = (x2 - 1) / 2
+      y1 = (y2 - 1) / 2
+2. (First Pass) For each new cell:
+   All new cells have even indices.  
+   if x == 0 or x == 2m or y == 0 or y == 2n:
+      the cell is a wall (the outer border)
+   if x is odd and y is odd:
+      the cell is one of the original mazes open cells and is thus always open
+   if x is odd and y is even:
+      check the connection of the original cells above and below:
+      i.e. ((y2 - 1) - 1) / 2  (above) = (y2 - 2) / 2
+            ((y2 + 1) -1 ) / 2 (below) = y2/2 
+      if they are not connected, this is a wall
+   if x is even and y is odd:
+      check the connection of the original cells right and left:
+      i.e. ((x2 - 1) - 1) / 2  (above) = (x2 - 2) / 2
+            ((x2 + 1) -1 ) / 2 (below) = x2/2 
+      i they are not connected, this is a wall      
+   if x is even and y is even:
+      mark as undecided -- will complete in second pass
+  
+3. (Second Pass) For each undecided cell:
+   If any of the neighboring (right, left, up, down) cells is a wall, set
+   this cell to be a wall 
+
+
+
+
+
+
+
