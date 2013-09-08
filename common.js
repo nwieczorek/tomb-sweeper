@@ -17,10 +17,15 @@ function shuffleArray(array) {
     return array;
 }
 
+function randomArrayItem(array){
+   var len = array.length;
+   var idx = Math.floor( Math.random() * len);
+   return array[idx];
+}
+
 function getMousePos(canvas, evt){
    var rect = canvas.getBoundingClientRect();
-   return { x: evt.clientX - rect.left,
-            y: evt.clientY - rect.top};
+   return new Point(  evt.clientX - rect.left, evt.clientY - rect.top);
 }
 
 /*---------------------------------------------------------------

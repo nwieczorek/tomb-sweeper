@@ -1,68 +1,12 @@
 const INPUT_MAZE_WIDTH = 6;
 const INPUT_MAZE_HEIGHT = 6;
-const TOMB_OFFSET_X = 10;
-const TOMB_OFFSET_Y = 10;
-const TILE_WIDTH = 32;
-const TILE_HEIGHT = 32;
+const TOMB_OFFSET = new Point(10,10);
+const TILE_SIZE = new Point( 32, 32);
 
 const STATE_LOADING = 'loading';
 const STATE_PLAYING = 'playing';
 
 
-/*---------------------------------------------------------------
- * TombCell class
- */
-function TombCell(x,y){
-   Point.call(this,x,y);
-   this.contents = Tomb.EMPTY;
-}
-TombCell.prototype = Object.create(Point.prototype);
-TombCell.prototype.constructor = TombCell;
-
-
-/*---------------------------------------------------------------
- * Tomb class
- */
-function Tomb( inputMaze){
-   var x,y,iy,ix,cellRow;
-   this.width = (inputMaze.width * 2) + 1;
-   this.height = (inputMaze.height * 2) + 1;
-   this.cells = []
-
-   for (y = 0; y < this.height; y++){
-      cellRow = [];
-      for (x = 0; x < this.width; x++){
-         cell = new TombCell(x,y);
-         if (x == 0 || x == (inputMaze.width * 2) || y == 0 || y == (inputMaze.height * 2)){
-            cell.contents = Tomb.WALL;
-         }else if ((x % 2) == 1 && (y % 2) == 1){
-            null;
-         }else if ((x % 2) == 1 && (y % 2) == 0){
-            iy = (y - 2) / 2;
-            ix = (x - 1) / 2;
-            if (!(inputMaze.cells[iy][ix].down)){
-               cell.contents = Tomb.WALL;
-            }
-         }else if ((x % 2) == 0 && (y % 2) == 1){
-            iy = (y - 1) / 2;
-            ix = (x - 2) / 2;
-            if (!(inputMaze.cells[iy][ix].right)){
-               cell.contents = Tomb.WALL;
-            }
-         }else {
-            cell.contents = Tomb.WALL;
-         }
-         cellRow.push(cell);
-      }
-      this.cells.push( cellRow);
-   }
-}
-
-Tomb.prototype.isValid = function(pt){
-   return (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height);
-}
-Tomb.EMPTY = 0;
-Tomb.WALL = 1;
 
 
 //---- END CLASSES --------------------------------------------------
@@ -114,21 +58,17 @@ function canvasApp() {
     */
 
    function onMouseMove(e){
-      var mouseX;
-      var mouseY;
-      var gridX,gridY;
-      mouseX = e.offsetX - theCanvas.offsetLeft;
-      gridX = Math.floor((mouseX - TOMB_OFFSET_X) / TILE_WIDTH);
-      mouseY = e.offsetY - theCanvas.offsetTop;
-      gridY = Math.floor((mouseY - TOMB_OFFSET_Y) / TILE_HEIGHT);
-      theText = "hovered " + gridX + "," + gridY + " (" + mouseX + "," + mouseY; + ")";
-      hoverPt.x = gridX;
-      hoverPt.y = gridY;
+      var pos = getMousePos(theCanvas,e);
+      var cell =actualToCell(pos); 
+      theText = "hovered " + pos + "=" + cell; 
+      hoverPt.x = cell.x
+      hoverPt.y = cell.y;
 
    }
 
    function onMouseClick(e){
-      theText = "clicked " + mouseX + "," + mouseY;
+      var pos = getMousePos(theCanvas,e);
+      log("Clicked " + pos + "=" + actualToCell(pos));
    }
 
    function eventSheetLoaded() {
@@ -154,44 +94,55 @@ function canvasApp() {
    gameLoop();
 
    function cellToActual( pt){
-      return new Point( (pt.x * TILE_WIDTH) + TOMB_OFFSET_X, (pt.y * TILE_HEIGHT) + TOMB_OFFSET_Y);
+      return new Point( (pt.x * TILE_SIZE.x) + TOMB_OFFSET.x, (pt.y * TILE_SIZE.y) + TOMB_OFFSET.y);
+   }
+
+   function actualToCell(pt){
+      return new Point( Math.floor((pt.x - TOMB_OFFSET.x) / TILE_SIZE.x),
+            Math.floor((pt.y - TOMB_OFFSET.y) / TILE_SIZE.y));
    }
 
    function drawCharacter( character,cell){
       var actual = cellToActual(cell); 
-      context.drawImage( characterTileSheet, character.tileOnSheet.x * TILE_WIDTH, character.tileOnSheet.y * TILE_HEIGHT,
-            TILE_WIDTH, TILE_HEIGHT,
-            actual.x, actual.y, TILE_WIDTH, TILE_HEIGHT);
+      context.drawImage( characterTileSheet, character.tileOnSheet.x * TILE_SIZE.x, 
+            character.tileOnSheet.y * TILE_SIZE.y,
+            TILE_SIZE.x, TILE_SIZE.y,
+            actual.x, actual.y, TILE_SIZE.x, TILE_SIZE.y);
    }
+
+   function drawCell( cell){
+      var actual = cellToActual(cell); 
+      var tileOnSheet = cell.tileOnSheet();
+      context.drawImage(tombTileSheet, tileOnSheet.x * TILE_SIZE.x, 
+            tileOnSheet.y * TILE_SIZE.y, 
+            TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,TILE_SIZE.x,TILE_SIZE.y);
+      if (cell.contents != null){
+         drawCharacter( cell.contents, cell);
+      }
+   }
+
+
 
    function drawScreen() {
       var x, y, posX, posY, tileRow, tileCol;
       context.fillStyle = '#aaaaaa';
       context.fillRect(0,0, theCanvas.width, theCanvas.height);
 
-      warrior = makeWarrior();
       for (y = 0; y < tomb.height; y++){
          for (x = 0; x < tomb.width; x++){
-            tileRow = (tomb.cells[y][x].contents == Tomb.WALL)? TILE_HEIGHT : 0;
-            var actual = cellToActual( new Point(x,y));
-            tileCol = 0;
-            context.drawImage(tombTileSheet, tileCol, tileRow, TILE_WIDTH, TILE_HEIGHT,actual.x,actual.y,TILE_WIDTH,TILE_HEIGHT);
+            drawCell( tomb.getCell(x,y));
          }
       }
 
       if (tomb.isValid(hoverPt)){
-         log("drawing hover: " + hoverPt);
          var actual = cellToActual( hoverPt);
-         context.drawImage(tombTileSheet, 3 * 32, 0, TILE_WIDTH, TILE_HEIGHT,actual.x,actual.y,TILE_WIDTH,TILE_HEIGHT);
+         context.drawImage(tombTileSheet, 3 * 32, 0, TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,TILE_SIZE.x,TILE_SIZE.y);
       }
 
-      drawCharacter( warrior, hoverPt);
-
+      //drawCharacter( warrior, hoverPt);
       context.fillStyle = '#000000';
       context.font = '20px sans-serif';
       context.textBaseline = 'top';
       context.fillText(theText, 400, 0);
-         
-
    }
 }
