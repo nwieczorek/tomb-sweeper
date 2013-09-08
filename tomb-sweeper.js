@@ -1,3 +1,5 @@
+const INPUT_MAZE_WIDTH = 6;
+const INPUT_MAZE_HEIGHT = 6;
 const TOMB_OFFSET_X = 10;
 const TOMB_OFFSET_Y = 10;
 const TILE_WIDTH = 32;
@@ -6,179 +8,62 @@ const TILE_HEIGHT = 32;
 const STATE_LOADING = 'loading';
 const STATE_PLAYING = 'playing';
 
-   /*---------------------------------------------------------------
-    * InputPoint class
-    */
-   function InputPoint(x,y){
-      Point.call(this,x,y);
-      this.right = null;
-      this.down = null;
-   }
-   InputPoint.prototype = Object.create(Point.prototype);
-   InputPoint.prototype.constructor = InputPoint;
+
+/*---------------------------------------------------------------
+ * TombCell class
+ */
+function TombCell(x,y){
+   Point.call(this,x,y);
+   this.contents = Tomb.EMPTY;
+}
+TombCell.prototype = Object.create(Point.prototype);
+TombCell.prototype.constructor = TombCell;
 
 
-   /*---------------------------------------------------------------
-    * InputEdge class
-    */
-   function InputEdge( cell, direction){
-      this.cell = cell;
-      this.direction = direction;
-   }
+/*---------------------------------------------------------------
+ * Tomb class
+ */
+function Tomb( inputMaze){
+   var x,y,iy,ix,cellRow;
+   this.width = (inputMaze.width * 2) + 1;
+   this.height = (inputMaze.height * 2) + 1;
+   this.cells = []
 
-   InputEdge.prototype.getOther = function(){
-      return this.cell.add( this.direction);
-   }
-
-
-   /*---------------------------------------------------------------
-    * InputMaze class
-    */
-   function InputMaze( width, height){
-      this.width = width;
-      this.height = height;
-      this.cells = [];
-      this.initialize();
-   }
-
-   InputMaze.prototype.initialize = function(){
-      var x,y,cellRow;
-      var edges = [];
-      var connections = {};
-      var cell, edge, cellB;
-
-      function addConnection( cell){
-         var key = cell.toString();
-         if (!(key in connections)){
-            connections[key] = {};
-            connections[key][key] = true;
-         }
-      }
-
-      function areConnected( cellA, cellB){
-         var keyA = cellA.toString(), keyB = cellB.toString();
-         //log("are connected " + keyA + "," + keyB);
-         return keyB in connections[keyA] || keyA in connections[keyB];
-      }
-
-      function connect( cellA, cellB){
-         var keyA = cellA.toString(), keyB = cellB.toString();
-         for (var k in connections[keyB]){
-            connections[keyA][k] = true;
-         }
-         connections[keyB] = connections[keyA];
-      }
-
-      //create the cells
-      for (y = 0; y < this.height; y++){
-         cellRow = [];
-         for (x = 0; x < this.width; x++){
-            cell = new InputPoint(x,y);
-            addConnection(cell); 
-            cellRow.push(cell);
-         }
-         this.cells.push( cellRow);
-      }
-
-
-      //initialize the edges -- the right and down connections
-      for (y = 0; y < this.height; y++){
-         for (x = 0; x < this.width; x++){
-            cell = this.cells[y][x];
-            if (x < (this.width - 1)){
-               edges.push( new InputEdge(cell, Point.RIGHT));
-            }
-            if (y < (this.height - 1)){
-               edges.push(new InputEdge(cell,Point.DOWN));
-            }
-         }
-      }
-      shuffleArray( edges);
-
-      for (var i = 0, len = edges.length; i < len; i++){
-         edge = edges[i];
-         cellB = edge.getOther();
-         if (!(areConnected(edge.cell, cellB))){
-            connect(edge.cell, cellB);   
-            if (edge.direction == Point.RIGHT){
-               edge.cell.right = cellB;
-            } else if (edge.direction == Point.DOWN){
-               edge.cell.down = cellB;
-            }
-         }
-      }
-   }
-
-
-   InputMaze.prototype.print = function(){
-      var line, cell;
-      for (y = 0; y < this.height; y++){
-         //print actual line
-         line = "";
-         for (x = 0; x < this.width; x++){
-            cell = this.cells[y][x];
-            line +=  "" + x; 
-            line += (cell.right) ? "-" : "#";
-            line += (cell.down) ? "." : "_";
-         }
-         log(y + ":" + line);
-      }
-   }
-   /*---------------------------------------------------------------
-    * TombCell class
-    */
-   function TombCell(x,y){
-      Point.call(this,x,y);
-      this.contents = Tomb.EMPTY;
-   }
-   TombCell.prototype = Object.create(Point.prototype);
-   TombCell.prototype.constructor = TombCell;
-
-
-   /*---------------------------------------------------------------
-    * Tomb class
-    */
-   function Tomb( inputMaze){
-      var x,y,iy,ix,cellRow;
-      this.width = (inputMaze.width * 2) + 1;
-      this.height = (inputMaze.height * 2) + 1;
-      this.cells = []
-
-      for (y = 0; y < this.height; y++){
-         cellRow = [];
-         for (x = 0; x < this.width; x++){
-            cell = new TombCell(x,y);
-            if (x == 0 || x == (inputMaze.width * 2) || y == 0 || y == (inputMaze.height * 2)){
-               cell.contents = Tomb.WALL;
-            }else if ((x % 2) == 1 && (y % 2) == 1){
-               null;
-            }else if ((x % 2) == 1 && (y % 2) == 0){
-               iy = (y - 2) / 2;
-               ix = (x - 1) / 2;
-               if (!(inputMaze.cells[iy][ix].down)){
-                  cell.contents = Tomb.WALL;
-               }
-            }else if ((x % 2) == 0 && (y % 2) == 1){
-               iy = (y - 1) / 2;
-               ix = (x - 2) / 2;
-               if (!(inputMaze.cells[iy][ix].right)){
-                  cell.contents = Tomb.WALL;
-               }
-            }else {
+   for (y = 0; y < this.height; y++){
+      cellRow = [];
+      for (x = 0; x < this.width; x++){
+         cell = new TombCell(x,y);
+         if (x == 0 || x == (inputMaze.width * 2) || y == 0 || y == (inputMaze.height * 2)){
+            cell.contents = Tomb.WALL;
+         }else if ((x % 2) == 1 && (y % 2) == 1){
+            null;
+         }else if ((x % 2) == 1 && (y % 2) == 0){
+            iy = (y - 2) / 2;
+            ix = (x - 1) / 2;
+            if (!(inputMaze.cells[iy][ix].down)){
                cell.contents = Tomb.WALL;
             }
-            cellRow.push(cell);
+         }else if ((x % 2) == 0 && (y % 2) == 1){
+            iy = (y - 1) / 2;
+            ix = (x - 2) / 2;
+            if (!(inputMaze.cells[iy][ix].right)){
+               cell.contents = Tomb.WALL;
+            }
+         }else {
+            cell.contents = Tomb.WALL;
          }
-         this.cells.push( cellRow);
+         cellRow.push(cell);
       }
+      this.cells.push( cellRow);
    }
+}
 
-   Tomb.prototype.isValid = function(pt){
-      return (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height);
-   }
+Tomb.prototype.isValid = function(pt){
+   return (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height);
+}
+Tomb.EMPTY = 0;
+Tomb.WALL = 1;
 
-   Tomb.EMPTY = 0;
-   Tomb.WALL = 1;
 
 //---- END CLASSES --------------------------------------------------
 window.addEventListener('load', eventWindowLoaded, false);
@@ -203,18 +88,23 @@ function canvasApp() {
    theCanvas.addEventListener("mousemove",onMouseMove, false);
    theCanvas.addEventListener("click",onMouseClick,false);
 
-   var tileSheet = new Image();
+   var tombTileSheet = new Image();
+   var characterTileSheet = new Image();
    var counter = 0;
 
    var appState = STATE_LOADING;
    var hoverPt = new Point(-1,-1);
    var theText = "unclicked";
 
-   var tilesLoaded = false;
-   tileSheet.addEventListener('load',eventSheetLoaded, false);
-   tileSheet.src="resources/tomb-tiles.png";
+   var tilesLoaded = 0;
+   const NUMBER_OF_TILESHEETS = 2;
+   tombTileSheet.addEventListener('load',eventSheetLoaded, false);
+   tombTileSheet.src="resources/tomb-tiles.png";
 
-   var iMaze = new InputMaze(5,5);
+   characterTileSheet.addEventListener('load',eventSheetLoaded,false);
+   characterTileSheet.src="resources/character-tiles.png";
+
+   var iMaze = new InputMaze(INPUT_MAZE_WIDTH,INPUT_MAZE_HEIGHT);
    iMaze.print();
 
 
@@ -242,7 +132,7 @@ function canvasApp() {
    }
 
    function eventSheetLoaded() {
-      tilesLoaded =true;
+      tilesLoaded++;
    }
 
 
@@ -250,7 +140,7 @@ function canvasApp() {
       window.setTimeout(gameLoop, 100);
       switch (appState){
          case STATE_LOADING:
-            if (tilesLoaded){
+            if (tilesLoaded >= NUMBER_OF_TILESHEETS){
                appState = STATE_PLAYING;
             }
             break;
@@ -263,27 +153,39 @@ function canvasApp() {
 
    gameLoop();
 
+   function cellToActual( pt){
+      return new Point( (pt.x * TILE_WIDTH) + TOMB_OFFSET_X, (pt.y * TILE_HEIGHT) + TOMB_OFFSET_Y);
+   }
+
+   function drawCharacter( character,cell){
+      var actual = cellToActual(cell); 
+      context.drawImage( characterTileSheet, character.tileOnSheet.x * TILE_WIDTH, character.tileOnSheet.y * TILE_HEIGHT,
+            TILE_WIDTH, TILE_HEIGHT,
+            actual.x, actual.y, TILE_WIDTH, TILE_HEIGHT);
+   }
+
    function drawScreen() {
       var x, y, posX, posY, tileRow, tileCol;
       context.fillStyle = '#aaaaaa';
       context.fillRect(0,0, theCanvas.width, theCanvas.height);
 
+      warrior = makeWarrior();
       for (y = 0; y < tomb.height; y++){
          for (x = 0; x < tomb.width; x++){
             tileRow = (tomb.cells[y][x].contents == Tomb.WALL)? TILE_HEIGHT : 0;
-            posX = (x * TILE_WIDTH) + TOMB_OFFSET_X;
-            posY = (y * TILE_WIDTH) + TOMB_OFFSET_Y;
+            var actual = cellToActual( new Point(x,y));
             tileCol = 0;
-            context.drawImage(tileSheet, tileCol, tileRow, TILE_WIDTH, TILE_HEIGHT,posX,posY,TILE_WIDTH,TILE_HEIGHT);
+            context.drawImage(tombTileSheet, tileCol, tileRow, TILE_WIDTH, TILE_HEIGHT,actual.x,actual.y,TILE_WIDTH,TILE_HEIGHT);
          }
       }
 
       if (tomb.isValid(hoverPt)){
          log("drawing hover: " + hoverPt);
-         posX = (hoverPt.x * TILE_WIDTH) + TOMB_OFFSET_X;
-         posY = (hoverPt.y * TILE_WIDTH) + TOMB_OFFSET_Y;
-         context.drawImage(tileSheet, 3 * 32, 0, TILE_WIDTH, TILE_HEIGHT,posX,posY,TILE_WIDTH,TILE_HEIGHT);
+         var actual = cellToActual( hoverPt);
+         context.drawImage(tombTileSheet, 3 * 32, 0, TILE_WIDTH, TILE_HEIGHT,actual.x,actual.y,TILE_WIDTH,TILE_HEIGHT);
       }
+
+      drawCharacter( warrior, hoverPt);
 
       context.fillStyle = '#000000';
       context.font = '20px sans-serif';
