@@ -34,6 +34,7 @@ function InputMaze( width, height){
 }
 
 InputMaze.prototype.initialize = function(){
+   'use strict';
    var x,y,cellRow;
    var edges = [];
    var connections = {};
@@ -103,7 +104,8 @@ InputMaze.prototype.initialize = function(){
 
 
 InputMaze.prototype.print = function(){
-   var line, cell;
+   'use strict';
+   var line, cell, x, y;
    for (y = 0; y < this.height; y++){
       //print actual line
       line = "";
@@ -127,6 +129,7 @@ function TombCell(x,y){
    Point.call(this,x,y);
    this.structure = TombCell.EMPTY;
    this.contents = null;
+   this.revealed = false;
    this.tileSet = {};
    this.tileSet.empty = randomArrayItem(TombCell.EMPTY_TILES);
    this.tileSet.wall = randomArrayItem(TombCell.WALL_TILES);
@@ -147,6 +150,12 @@ TombCell.prototype.tileOnSheet = function(){
 TombCell.prototype.toString = function(){
    return "[Cell:" + this.x + "," + this.y + "]";
 }
+
+TombCell.prototype.canPass = function() {
+   return this.structure == TombCell.EMPTY && 
+      (this.contents == null || this.contents.playerControlled);
+}
+
 TombCell.EMPTY = 0;
 TombCell.WALL = 1;
 
@@ -157,6 +166,7 @@ TombCell.WALL_TILES = [ new Point(0,1), new Point(1,1), new Point(2,1) ];
  * Tomb class
  */
 function Tomb( inputMaze){
+   'use strict';
    var x,y,iy,ix,cellRow;
    this.width = (inputMaze.width * 2) + 1;
    this.height = (inputMaze.height * 2) + 1;
@@ -200,11 +210,72 @@ function Tomb( inputMaze){
 }
 
 Tomb.prototype.addCharacters = function(){
+   'use strict';
    var mid = new Point( Math.floor(this.width / 2), Math.floor(this.height / 2) );
    var odd_mid = new Point( mid.x % 2 == 0 ? mid.x - 1 : mid.x,
                             mid.y % 2 == 0 ? mid.y - 1 : mid.y);
-   this.cells[odd_mid.y][odd_mid.x].contents = makeWarrior();
+   var cell = this.cells[odd_mid.y][odd_mid.x];
+   cell.contents = makeWarrior();
+}
 
+/**************************
+ * Return an object storing all possible paths as a dictionary where the keys
+ * are the destination coordinates
+ */
+Tomb.prototype.getPaths = function(fromPt){
+   'use strict';
+   var fromCell = this.getCell(fromPt.x,fromPt.y);
+   log(fromCell);
+   if (fromCell.contents == null){
+      throw "getPaths called on null cell contents";
+   }
+
+   var paths = {};
+   var currentPaths, currentPath;
+
+   function extendPath( tomb, pathToExtend, extendPt){
+      var newPath;
+      for (var d = 0; d < 4; d++){
+         var direction = Point.ORTHOGONAL[d];
+         var newPt = extendPt.add(direction);
+         if (tomb.isValid(newPt)){
+            var newCell = tomb.getCell(newPt.x,newPt.y);
+            if (!(paths.hasOwnProperty( newCell.toString())) &&
+                  newCell.canPass()){
+               newPath = pathToExtend.slice(0);
+               newPath.push( newPt);
+               paths[ newPt.toString() ] = newPath;
+            }
+         }
+      }
+   }
+
+   for (var length = 1; length <= fromCell.contents.movement; length ++){
+      if (length == 1){
+         extendPath(this, [], fromPt);
+      }else {
+         for (var k in paths){
+            if (paths.hasOwnProperty(k)){
+               currentPath = paths[k];
+               var lastPt = currentPath[currentPath.length - 1];
+               extendPath(this, currentPath, lastPt);
+            }
+         }
+      }
+   }
+   return paths;
+}
+
+
+            
+
+
+/**************************
+ * Reveal the cells after character movement
+ */
+Tomb.prototype.reveal = function( fromCell){
+   'use strict';
+   log("not implemented");
 }
 
 Tomb.prototype.isValid = function(pt){

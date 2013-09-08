@@ -2,7 +2,11 @@ const INPUT_MAZE_WIDTH = 6;
 const INPUT_MAZE_HEIGHT = 6;
 const TOMB_OFFSET = new Point(10,10);
 const TILE_SIZE = new Point( 32, 32);
-
+const TILE_DRAW_SIZE = new Point(32,32);
+const HOVER_TILE = new Point(0,2);
+const SELECTED_TILE = new Point(1,2);
+const ACTION_TILE = new Point(2,2);
+const HIDDEN_TILE = new Point(0,3);
 const STATE_LOADING = 'loading';
 const STATE_PLAYING = 'playing';
 
@@ -38,6 +42,8 @@ function canvasApp() {
 
    var appState = STATE_LOADING;
    var hoverPt = new Point(-1,-1);
+   var selectedPt = new Point(-1,-1);
+   var selectedPaths = null;
    var theText = "unclicked";
 
    var tilesLoaded = 0;
@@ -68,7 +74,16 @@ function canvasApp() {
 
    function onMouseClick(e){
       var pos = getMousePos(theCanvas,e);
-      log("Clicked " + pos + "=" + actualToCell(pos));
+      var cellPt = actualToCell(pos);
+      var cell;
+      if (tomb.isValid(cellPt)){
+         cell = tomb.getCell(cellPt.x,cellPt.y);
+         if (cell.contents != null && cell.contents.isPlayerControlled()){
+            selectedPt = cell;
+            selectedPaths = tomb.getPaths(cell);
+         }
+      }
+      //log("Clicked " + pos + "=" + actualToCell(pos));
    }
 
    function eventSheetLoaded() {
@@ -107,7 +122,7 @@ function canvasApp() {
       context.drawImage( characterTileSheet, character.tileOnSheet.x * TILE_SIZE.x, 
             character.tileOnSheet.y * TILE_SIZE.y,
             TILE_SIZE.x, TILE_SIZE.y,
-            actual.x, actual.y, TILE_SIZE.x, TILE_SIZE.y);
+            actual.x, actual.y, TILE_DRAW_SIZE.x, TILE_DRAW_SIZE.y);
    }
 
    function drawCell( cell){
@@ -115,13 +130,41 @@ function canvasApp() {
       var tileOnSheet = cell.tileOnSheet();
       context.drawImage(tombTileSheet, tileOnSheet.x * TILE_SIZE.x, 
             tileOnSheet.y * TILE_SIZE.y, 
-            TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,TILE_SIZE.x,TILE_SIZE.y);
+            TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
+            TILE_DRAW_SIZE.x,TILE_DRAW_SIZE.y);
+
       if (cell.contents != null){
          drawCharacter( cell.contents, cell);
       }
    }
 
 
+   function drawHover(){
+      'use strict';
+      var tile;
+      if (tomb.isValid(hoverPt)){
+         var actual = cellToActual( hoverPt);
+         var pathKey = hoverPt.toString();
+         if (selectedPaths &&
+               selectedPaths.hasOwnProperty(pathKey) ){
+            tile = ACTION_TILE;
+         }else {
+            tile = HOVER_TILE;
+         }
+         context.drawImage(tombTileSheet, tile.x * TILE_SIZE.x, tile.y * TILE_SIZE.y, 
+               TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
+               TILE_SIZE.x,TILE_SIZE.y);
+      }
+   }
+
+   function drawSelected(){
+      if (tomb.isValid( selectedPt)){
+         var actual = cellToActual(selectedPt);
+         context.drawImage(tombTileSheet, SELECTED_TILE.x * TILE_SIZE.x, SELECTED_TILE.y * TILE_SIZE.y, 
+               TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
+               TILE_SIZE.x,TILE_SIZE.y);
+      }
+   }
 
    function drawScreen() {
       var x, y, posX, posY, tileRow, tileCol;
@@ -134,15 +177,13 @@ function canvasApp() {
          }
       }
 
-      if (tomb.isValid(hoverPt)){
-         var actual = cellToActual( hoverPt);
-         context.drawImage(tombTileSheet, 3 * 32, 0, TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,TILE_SIZE.x,TILE_SIZE.y);
-      }
+      drawHover();
+      drawSelected();
 
       //drawCharacter( warrior, hoverPt);
       context.fillStyle = '#000000';
       context.font = '20px sans-serif';
       context.textBaseline = 'top';
-      context.fillText(theText, 400, 0);
+      context.fillText(theText, 450, 0);
    }
 }

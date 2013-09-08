@@ -47,7 +47,7 @@ Point.prototype.add = function(other){
    return new Point( this.x + other.x, this.y + other.y);
 }
 
-Point.prototype.equal = function(other){
+Point.prototype.equals = function(other){
    return this.x == other.x && this.y == other.y;
 }
 
@@ -55,3 +55,4 @@ Point.UP = new Point(0,-1);
 Point.DOWN = new Point(0,1);
 Point.LEFT = new Point(-1,0);
 Point.RIGHT = new Point(1,0);
+Point.ORTHOGONAL = [ Point.UP, Point.RIGHT, Point.DOWN, Point.LEFT];
