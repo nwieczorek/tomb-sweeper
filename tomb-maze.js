@@ -128,7 +128,7 @@ InputMaze.prototype.print = function(){
 function TombCell(x,y){
    Point.call(this,x,y);
    this.structure = TombCell.EMPTY;
-   this.contents = null;
+   this.character = null;
    this.revealed = false;
    this.tileSet = {};
    this.tileSet.empty = randomArrayItem(TombCell.EMPTY_TILES);
@@ -153,7 +153,7 @@ TombCell.prototype.toString = function(){
 
 TombCell.prototype.canPass = function() {
    return this.structure == TombCell.EMPTY && 
-      (this.contents == null || this.contents.playerControlled);
+      (this.character == null || this.character.playerControlled);
 }
 
 TombCell.EMPTY = 0;
@@ -215,7 +215,7 @@ Tomb.prototype.addCharacters = function(){
    var odd_mid = new Point( mid.x % 2 == 0 ? mid.x - 1 : mid.x,
                             mid.y % 2 == 0 ? mid.y - 1 : mid.y);
    var cell = this.cells[odd_mid.y][odd_mid.x];
-   cell.contents = makeWarrior();
+   cell.character = makeWarrior();
 }
 
 /**************************
@@ -226,8 +226,8 @@ Tomb.prototype.getPaths = function(fromPt){
    'use strict';
    var fromCell = this.getCell(fromPt.x,fromPt.y);
    log(fromCell);
-   if (fromCell.contents == null){
-      throw "getPaths called on null cell contents";
+   if (fromCell.character == null){
+      throw "getPaths called on null cell character";
    }
 
    var paths = {};
@@ -240,7 +240,8 @@ Tomb.prototype.getPaths = function(fromPt){
          var newPt = extendPt.add(direction);
          if (tomb.isValid(newPt)){
             var newCell = tomb.getCell(newPt.x,newPt.y);
-            if (!(paths.hasOwnProperty( newCell.toString())) &&
+            if (!paths.hasOwnProperty( newCell.toString()) &&
+                  !newPt.equals(fromPt) &&
                   newCell.canPass()){
                newPath = pathToExtend.slice(0);
                newPath.push( newPt);
@@ -250,7 +251,7 @@ Tomb.prototype.getPaths = function(fromPt){
       }
    }
 
-   for (var length = 1; length <= fromCell.contents.movement; length ++){
+   for (var length = 1; length <= fromCell.character.movement; length ++){
       if (length == 1){
          extendPath(this, [], fromPt);
       }else {
@@ -279,9 +280,21 @@ Tomb.prototype.reveal = function( fromCell){
 }
 
 Tomb.prototype.isValid = function(pt){
-   return (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height);
+   if (pt){
+      return (pt.x >= 0 && pt.x < this.width && pt.y >= 0 && pt.y < this.height);
+   }else{
+      return false;
+   }
 }
 
 Tomb.prototype.getCell = function(x,y){
    return this.cells[y][x];
+}
+
+Tomb.prototype.forEach = function(f){
+   for (var y = 0; y < this.height; y++){
+      for (var x = 0; x < this.width; x++){
+         f( this.getCell(x,y));
+      }
+   }
 }

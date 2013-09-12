@@ -43,8 +43,16 @@ Point.prototype.adjacent = function(other){
             ((this.y == other.y) && ((this.x + 1 == other.x) || (this.x - 1 == other.x))));
 }
 
+Point.prototype.copy = function(){
+   return new Point( this.x, this.y);
+}
+
 Point.prototype.add = function(other){
    return new Point( this.x + other.x, this.y + other.y);
+}
+
+Point.prototype.multiply = function( scalar){
+   return new Point( this.x * scalar, this.y * scalar);
 }
 
 Point.prototype.equals = function(other){
@@ -56,3 +64,21 @@ Point.DOWN = new Point(0,1);
 Point.LEFT = new Point(-1,0);
 Point.RIGHT = new Point(1,0);
 Point.ORTHOGONAL = [ Point.UP, Point.RIGHT, Point.DOWN, Point.LEFT];
+
+Point.getDirection = function( origin, target){
+   if (target.x == origin.x){
+      if (target.y < origin.y){
+         return Point.UP;
+      } else if (target.y > origin.y){
+         return Point.DOWN;
+      }
+   }else if (target.y == origin.y){
+      if (target.x < origin.x){
+         return Point.LEFT;
+      }else if (target.x > origin.x){
+         return Point.RIGHT;
+      }
+   }
+   return null;
+}
+
