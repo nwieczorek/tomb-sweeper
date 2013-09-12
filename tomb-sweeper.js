@@ -67,11 +67,11 @@ function canvasApp() {
    /*---------------------------------------------------------------------------
     * Action class 
     */
-   function Action( sourcePt, targetPt){
+   function Action( sourcePt, targetPt, character){
       'use strict';
       this.sourcePt = sourcePt;
       this.targetPt = targetPt;
-      this.character = sourcePt.character;
+      this.character = character;
       this.sourceActualPt = cellToActual(sourcePt);
       this.targetActualPt = cellToActual(targetPt);
       this.direction = Point.getDirection(sourcePt,targetPt);
@@ -96,7 +96,7 @@ function canvasApp() {
       return !(this.direction)
    }
    Action.prototype.toString = function(){
-      return '[Action: ' + this.sourcePt + ' to ' + this.targetPt + ']';
+      return '[Action: ' + this.sourcePt + ' to ' + this.targetPt + ',' + this.currentPt + ']';
    }
 
 
@@ -126,8 +126,8 @@ function canvasApp() {
                   var path = selectedPaths[pathKey];
                   var lastPt = selectedPt;
                   for( var i = 0; i < path.length; i++){
-                     var a = new Action( lastPt, path[i]);
-                     actionQueue.unshift(a);
+                     var a = new Action( lastPt, path[i], selectedPt.character);
+                     actionQueue.push(a);
                      lastPt = path[i];
                   }
 
@@ -207,6 +207,9 @@ function canvasApp() {
       var character = cell.character;
       if (character){
          var actual = cellToActual(cell); 
+         //if (currentAction){
+         //log( 'Character ' + character + ',' + currentAction.character);
+        // }
          if (currentAction && currentAction.character == character ){
             actual = currentAction.currentPt;
          }
@@ -263,7 +266,6 @@ function canvasApp() {
       var x, y, posX, posY, tileRow, tileCol;
       context.fillStyle = '#aaaaaa';
       context.fillRect(0,0, theCanvas.width, theCanvas.height);
-
 
       tomb.forEach( drawCell);
       tomb.forEach( drawCharacter);

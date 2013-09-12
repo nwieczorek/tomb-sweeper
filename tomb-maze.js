@@ -240,11 +240,12 @@ Tomb.prototype.getPaths = function(fromPt){
          var newPt = extendPt.add(direction);
          if (tomb.isValid(newPt)){
             var newCell = tomb.getCell(newPt.x,newPt.y);
-            if (!paths.hasOwnProperty( newCell.toString()) &&
+            if (!paths.hasOwnProperty( newPt.toString()) &&
                   !newPt.equals(fromPt) &&
                   newCell.canPass()){
                newPath = pathToExtend.slice(0);
                newPath.push( newPt);
+               log('adding path for ' + newPt + ' length ' + newPath.length);
                paths[ newPt.toString() ] = newPath;
             }
          }

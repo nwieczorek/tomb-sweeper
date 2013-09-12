@@ -15,6 +15,10 @@ Character.prototype.isPlayerControlled = function(){
    return this.playerControlled;
 }
 
+Character.prototype.toString = function(){
+   return "[" + this.name + "]";
+}
+
 
 function makeWarrior(){
    return new Character('Warrior',3,3,new Point(0,0),true);
