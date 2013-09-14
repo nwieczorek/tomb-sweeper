@@ -129,6 +129,7 @@ function TombCell(x,y){
    Point.call(this,x,y);
    this.structure = TombCell.EMPTY;
    this.character = null;
+   this.key = false;
    this.revealed = false;
    this.tileSet = {};
    this.tileSet.empty = randomArrayItem(TombCell.EMPTY_TILES);
@@ -207,7 +208,9 @@ function Tomb( inputMaze){
    }
 
    this.addCharacters();
+   this.addKeys();
 }
+Tomb.NUMBER_OF_KEYS = 3;
 
 Tomb.prototype.addCharacters = function(){
    'use strict';
@@ -216,6 +219,35 @@ Tomb.prototype.addCharacters = function(){
                             mid.y % 2 == 0 ? mid.y - 1 : mid.y);
    var cell = this.cells[odd_mid.y][odd_mid.x];
    cell.character = makeWarrior();
+}
+
+Tomb.prototype.randomCell = function(){
+   return new Point( Math.floor(Math.random() * (this.width - 1)) + 1, //random in range 1 to width - 1 
+                        Math.floor( Math.random() * (this.height - 1)) + 1); //random in range 1 to height - 1
+}
+
+Tomb.prototype.addKeys = function(){
+   var keys = [];
+   while (keys.length < Tomb.NUMBER_OF_KEYS){
+      var k = this.randomCell();
+      var cell = this.getCell(k.x,k.y);
+      if (cell.structure != TombCell.EMPTY && cell.character == null){
+         //TODO check for adjacency to character
+         continue;
+      }
+      var matches = false;
+      for (var i = 0, len = keys.length; i < len; i++){
+         if (k.x == keys[i].x || k.y == keys[i].y){
+            matches = true;
+         }
+      }
+      if (matches){
+         continue;
+      }
+      //key is good
+      keys.push(k);
+      cell.key = true;
+   }
 }
 
 /**************************
@@ -245,7 +277,7 @@ Tomb.prototype.getPaths = function(fromPt){
                   newCell.canPass()){
                newPath = pathToExtend.slice(0);
                newPath.push( newPt);
-               log('adding path for ' + newPt + ' length ' + newPath.length);
+               //log('adding path for ' + newPt + ' length ' + newPath.length);
                paths[ newPt.toString() ] = newPath;
             }
          }
@@ -268,7 +300,6 @@ Tomb.prototype.getPaths = function(fromPt){
    return paths;
 }
 
-
             
 
 
@@ -290,6 +321,23 @@ Tomb.prototype.isValid = function(pt){
 
 Tomb.prototype.getCell = function(x,y){
    return this.cells[y][x];
+}
+
+Tomb.prototype.filter = function(f){
+   var result = [];
+   for (var y = 0; y < this.height; y++){
+      for (var x = 0; x < this.width; x++){
+         var c = this.getCell(x,y);
+         if (f(c)){
+            result.push(c);
+         }
+      }
+   }
+   return result;
+}
+
+Tomb.prototype.getPlayerCells = function(){
+   return this.filter( function(c) { return c.character != null && c.character.playerControlled})
 }
 
 Tomb.prototype.forEach = function(f){

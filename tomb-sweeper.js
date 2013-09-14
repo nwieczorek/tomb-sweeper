@@ -9,13 +9,14 @@ function canvasSupport () {
 
 function canvasApp() {
 
-   const INPUT_MAZE_WIDTH = 6;
-   const INPUT_MAZE_HEIGHT = 6;
-   const ANIMATION_SPEED = 6;
+   const INITIAL_INPUT_MAZE_WIDTH = 5;
+   const INITIAL_INPUT_MAZE_HEIGHT = 5;
+   const ANIMATION_SPEED = 9;
    const TOMB_OFFSET = new Point(10,10);
    const TILE_SIZE = new Point( 32, 32);
    const TILE_DRAW_SIZE = new Point(32,32);
    const HOVER_TILE = new Point(0,2);
+   const KEY_TILE = new Point(0,4);
    const SELECTED_TILE = new Point(1,2);
    const ACTION_TILE = new Point(2,2);
    const NO_ACTION_TILE = new Point(3,2);
@@ -58,12 +59,20 @@ function canvasApp() {
    characterTileSheet.addEventListener('load',eventSheetLoaded,false);
    characterTileSheet.src="resources/character-tiles.png";
 
-   var iMaze = new InputMaze(INPUT_MAZE_WIDTH,INPUT_MAZE_HEIGHT);
-   //iMaze.print();
+  
+   var tomb;
 
+   rebuildMaze(0);
 
-   var tomb = new Tomb( iMaze);
-   
+   function rebuildMaze( size_increase ){
+      var iMaze = new InputMaze(INITIAL_INPUT_MAZE_WIDTH + size_increase,
+                              INITIAL_INPUT_MAZE_HEIGHT + size_increase);
+      tomb = new Tomb( iMaze);
+      var pcells = tomb.getPlayerCells();
+      setSelected(pcells[0]);
+
+   }
+
    /*---------------------------------------------------------------------------
     * Action class 
     */
@@ -118,8 +127,7 @@ function canvasApp() {
          if (tomb.isValid(cellPt)){
             cell = tomb.getCell(cellPt.x,cellPt.y);
             if (cell.character != null && cell.character.isPlayerControlled()){
-               selectedPt = cell;
-               selectedPaths = tomb.getPaths(cell);
+               setSelected(cell);
             }else if (selectedPt && selectedPaths){
                var pathKey = cellPt.toString();
                if (selectedPaths.hasOwnProperty(pathKey) ){
@@ -130,8 +138,6 @@ function canvasApp() {
                      actionQueue.push(a);
                      lastPt = path[i];
                   }
-
-                  selectedPt = null;
                }
             }
          }
@@ -168,28 +174,35 @@ function canvasApp() {
    gameLoop();
 
 
+   function setSelected( cell){
+      selectedPt = cell;
+      selectedPaths = tomb.getPaths(cell);
+   }
+
    function handleAction(){
       if (currentAction == null && actionQueue.length > 0){
          currentAction = actionQueue.shift();
-         log('current action now ' + currentAction);
+         //log('current action now ' + currentAction);
       }
-      if (currentAction != null && currentAction.complete()){
-         log('moving for ' + currentAction);
-         var sourceCell = tomb.getCell( currentAction.sourcePt.x, currentAction.sourcePt.y); 
-         if (sourceCell && sourceCell.character){
-            var targetCell = tomb.getCell( currentAction.targetPt.x, currentAction.targetPt.y);
-            if (targetCell){
-               //Move the character from source into target
-               targetCell.character = sourceCell.character;
-               sourceCell.character = null;
-            }
-         }
-         currentAction = null;
-      } else if (currentAction != null){
-         log('stepping ' + currentAction);
+      if (currentAction != null){
+         //log('stepping ' + currentAction);
          currentAction.step(); 
+         if (currentAction.complete()){
+            //log('moving for ' + currentAction);
+            var sourceCell = tomb.getCell( currentAction.sourcePt.x, currentAction.sourcePt.y); 
+            if (sourceCell && sourceCell.character){
+               var targetCell = tomb.getCell( currentAction.targetPt.x, currentAction.targetPt.y);
+               if (targetCell){
+                  //Move the character from source into target
+                  targetCell.character = sourceCell.character;
+                  sourceCell.character = null;
+                  setSelected(targetCell);
+               }
+            }
+            currentAction = null;
+         }
       }else if (actionQueue.length == 0){
-         log('reverting state');
+         //log('reverting state');
          appState = STATE_PLAYING;
       }
    }
@@ -220,6 +233,14 @@ function canvasApp() {
       }
    }
 
+   function drawKey(cell){
+      var actual = cellToActual(cell); 
+      context.drawImage(tombTileSheet, KEY_TILE.x * TILE_SIZE.x, KEY_TILE.y * TILE_SIZE.y,
+            TILE_SIZE.x, TILE_SIZE.y, actual.x, actual.y,
+            TILE_DRAW_SIZE.x, TILE_DRAW_SIZE.y);
+      
+   }
+
    function drawCell( cell){
       var actual = cellToActual(cell); 
       var tileOnSheet = cell.tileOnSheet();
@@ -227,29 +248,30 @@ function canvasApp() {
             tileOnSheet.y * TILE_SIZE.y, 
             TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
             TILE_DRAW_SIZE.x,TILE_DRAW_SIZE.y);
+      if (cell.key){
+         drawKey(cell);
+      }
 
    }
 
 
    function drawHover(){
       'use strict';
-      var tile;
+      var tile = null;
       if (tomb.isValid(hoverPt)){
          var actual = cellToActual( hoverPt);
          var pathKey = hoverPt.toString();
          if (tomb.isValid(selectedPt)){
             if (selectedPaths &&
                   selectedPaths.hasOwnProperty(pathKey) ){
-               tile = ACTION_TILE;
-            }else {
-               tile = NO_ACTION_TILE;
-            }
-         }else{
                tile = HOVER_TILE;
+            }
          }
-         context.drawImage(tombTileSheet, tile.x * TILE_SIZE.x, tile.y * TILE_SIZE.y, 
-               TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
-               TILE_SIZE.x,TILE_SIZE.y);
+         if (tile != null){
+            context.drawImage(tombTileSheet, tile.x * TILE_SIZE.x, tile.y * TILE_SIZE.y, 
+                  TILE_SIZE.x, TILE_SIZE.y,actual.x,actual.y,
+                  TILE_SIZE.x,TILE_SIZE.y);
+         }
       }
    }
 
@@ -271,7 +293,7 @@ function canvasApp() {
       tomb.forEach( drawCharacter);
 
       drawHover();
-      drawSelected();
+      //drawSelected();
 
    }
 }
