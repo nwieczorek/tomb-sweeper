@@ -332,7 +332,13 @@ Tomb.prototype.getPaths = function(fromPt){
  */
 Tomb.prototype.reveal = function( fromCell){
    'use strict';
-   log("not implemented");
+   var adj = this.getAdjacent(fromCell);
+   for (var i = 0; i < adj.length; i++){
+      adj[i].revealed = true;
+      if (adj[i].character){
+         adj[i].character.awake = true;
+      }
+   }
 }
 
 Tomb.prototype.isValid = function(pt){
@@ -377,8 +383,33 @@ Tomb.prototype.filter = function(f){
    return result;
 }
 
+Tomb.prototype.filterRow = function(rowIndex, f){
+   var result = [];
+   for (var x = 0; x < this.width; x++){
+      var c = this.getCell(x,rowIndex);
+      if (f(c)){
+         result.push(c);
+      }
+   }
+   return result;
+}
+
+Tomb.prototype.filterColumn = function(colIndex, f){
+   var result = [];
+   for (var y = 0; y < this.height; y++){
+      var c = this.getCell(colIndex,y);
+      if (f(c)){
+         result.push(c);
+      }
+   }
+   return result;
+}
+
 Tomb.prototype.getPlayerCells = function(){
    return this.filter( function(c) { return c.character != null && c.character.playerControlled})
+}
+Tomb.prototype.getDemonCells = function(){
+   return this.filter( function(c) { return c.character != null && !c.character.playerControlled})
 }
 
 Tomb.prototype.forEach = function(f){

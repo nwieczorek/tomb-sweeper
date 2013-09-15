@@ -37,8 +37,9 @@ function canvasApp() {
    var HIDDEN_TILE = new Point(0,3);
    var STATE_LOADING = 'loading';
    var STATE_PLAYING = 'playing';
-   var STATE_ACTION = 'animation';
-
+   var STATE_ACTION = 'action';
+   var STATE_DEMON = 'demon';
+   var STATE_DEMON_ACTION = 'demonaction';
    var theCanvas;
    var context;
 
@@ -223,6 +224,23 @@ function canvasApp() {
             handleAction();
             drawScreen();
             break;
+         case STATE_DEMON:
+            log("state demon");
+            var demonCells = tomb.getDemonCells();
+            if (demonCells.some( function(c){ return c.character.awake;})){
+               demonAction();
+               appState = STATE_DEMON_ACTION;
+            }else {
+               appState = STATE_PLAYING;
+            }
+            drawScreen();
+            //fall through
+         case STATE_DEMON_ACTION:
+            drawScreen();
+            if (actionQueue.length == 0){
+               appState = STATE_PLAYING;
+            }
+            break;
       }
    }
    gameLoop();
@@ -233,11 +251,15 @@ function canvasApp() {
       selectedPaths = tomb.getPaths(cell);
    }
 
+   function demonAction(){
+      log("demon action");
+   }
 
    function move( sourceCell, targetCell){
       targetCell.character = sourceCell.character;
       sourceCell.character = null;
       setSelected(targetCell);
+      tomb.reveal(targetCell);
       visited.visit(targetCell);
       if (targetCell.key){
          targetCell.key = false;
@@ -265,7 +287,6 @@ function canvasApp() {
             currentAction = null;
          }
       }else if (actionQueue.length == 0){
-         //log('reverting state');
          appState = STATE_PLAYING;
       }
    }
@@ -313,6 +334,16 @@ function canvasApp() {
          return new Point( (pt.x * TILE_SIZE.x) + BORDER_OFFSET.x, 
                (pt.y * TILE_SIZE.y) + BORDER_OFFSET.y);
       }
+      function isDemonCell( cell){
+         return cell.character && !cell.character.playerControlled;
+      }
+
+      function getRowIndicator( row){
+         return tomb.filterRow(row, isDemonCell).length;
+      }
+      function getColumnIndicator( col){
+         return tomb.filterColumn(col,isDemonCell).length;
+      }
       for (var x = 0; x < width; x++){
          for (var y = 0; y < height; y++){
             if (x == 0 || x == (width - 1) || y == 0 || y == (height - 1)){
@@ -325,7 +356,7 @@ function canvasApp() {
                   var rowToShow = y - 1;
                   var indicator = 100;
                   if (visited.hasRow( rowToShow)){
-                     indicator = 2;
+                     indicator = getRowIndicator(rowToShow);
                   }
                   draw(tombTileSheet, NUMBER_TILES[indicator], actual);    
                //draw indicators along top
@@ -333,7 +364,7 @@ function canvasApp() {
                   var colToShow = x - 1;
                   var indicator = 100;
                   if (visited.hasCol(colToShow)){
-                     indicator = 3;
+                     indicator = getColumnIndicator(colToShow);
                   }
                   draw(tombTileSheet, NUMBER_TILES[indicator], actual);    
                }

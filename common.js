@@ -1,5 +1,4 @@
 
-
 function log(message){
    try{
       console.log(message);
