@@ -61,13 +61,15 @@ function canvasApp() {
 
   
    var tomb;
-
+   var level = 1;
    rebuildMaze(0);
+
 
    function rebuildMaze( size_increase ){
       var iMaze = new InputMaze(INITIAL_INPUT_MAZE_WIDTH + size_increase,
                               INITIAL_INPUT_MAZE_HEIGHT + size_increase);
-      tomb = new Tomb( iMaze);
+
+      tomb = new Tomb( iMaze, level);
       var pcells = tomb.getPlayerCells();
       setSelected(pcells[0]);
 

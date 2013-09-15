@@ -166,7 +166,7 @@ TombCell.WALL_TILES = [ new Point(0,1), new Point(1,1), new Point(2,1) ];
 /*---------------------------------------------------------------
  * Tomb class
  */
-function Tomb( inputMaze){
+function Tomb( inputMaze, level){
    'use strict';
    var x,y,iy,ix,cellRow;
    this.width = (inputMaze.width * 2) + 1;
@@ -209,8 +209,12 @@ function Tomb( inputMaze){
 
    this.addCharacters();
    this.addKeys();
+
+   var demonsToAdd = level + 2;
+   this.addDemons(demonsToAdd);
 }
 Tomb.NUMBER_OF_KEYS = 3;
+
 
 Tomb.prototype.addCharacters = function(){
    'use strict';
@@ -231,8 +235,11 @@ Tomb.prototype.addKeys = function(){
    while (keys.length < Tomb.NUMBER_OF_KEYS){
       var k = this.randomCell();
       var cell = this.getCell(k.x,k.y);
-      if (cell.structure != TombCell.EMPTY && cell.character == null){
-         //TODO check for adjacency to character
+      if (cell.structure != TombCell.EMPTY || cell.character != null){
+         continue;
+      }
+      var adj = this.getAdjacent(k);
+      if (adj.some( function(c) { return (c.character != null); })){
          continue;
       }
       var matches = false;
@@ -247,6 +254,23 @@ Tomb.prototype.addKeys = function(){
       //key is good
       keys.push(k);
       cell.key = true;
+   }
+}
+
+Tomb.prototype.addDemons = function( numToAdd){
+   var numAdded = 0;
+   while (numAdded < numToAdd){
+      var k = this.randomCell();
+      var cell = this.getCell(k.x,k.y);
+      if (cell.structure != TombCell.EMPTY || cell.character != null || cell.key){
+         continue;
+      }
+      var adj = this.getAdjacent(k);
+      if (adj.some( function(c) { return (c.character != null); })){
+         continue;
+      }
+      cell.character = makeDemon();
+      numAdded++;
    }
 }
 
@@ -323,7 +347,24 @@ Tomb.prototype.getCell = function(x,y){
    return this.cells[y][x];
 }
 
+Tomb.prototype.getAdjacent = function(iPt){
+   'use strict';
+   var adj = [];
+   for (var x = -1; x <= 1; x++){
+      for (var y = -1; y <= 1; y++){
+         if (x != 0 || y != 0){
+            var p = new Point( iPt.x + x, iPt.y + y);
+            if (this.isValid( p)){
+               adj.push( this.getCell(p.x,p.y));
+            }
+         }
+      }
+   }
+   return adj;
+}
+
 Tomb.prototype.filter = function(f){
+   'use strict';
    var result = [];
    for (var y = 0; y < this.height; y++){
       for (var x = 0; x < this.width; x++){
@@ -341,6 +382,7 @@ Tomb.prototype.getPlayerCells = function(){
 }
 
 Tomb.prototype.forEach = function(f){
+   'use strict';
    for (var y = 0; y < this.height; y++){
       for (var x = 0; x < this.width; x++){
          f( this.getCell(x,y));
