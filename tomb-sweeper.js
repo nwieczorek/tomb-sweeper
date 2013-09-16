@@ -128,8 +128,8 @@ function canvasApp() {
 
    var appState = STATE_LOADING;
    var hoverPt = new Point(-1,-1);
-   var selectedPt = new Point(-1,-1);
-   var selectedPaths = null;
+   var playerPt = new Point(-1,-1);
+   var playerPaths = null;
 
    var actionQueue = [];
    var currentAction = null;
@@ -160,7 +160,7 @@ function canvasApp() {
       tomb = new Tomb( iMaze, level);
       visited = new VisitTracker( tomb.width,tomb.height);
       var pcells = tomb.getPlayerCells();
-      setSelected(pcells[0]);
+      setPlayerCell(pcells[0]);
       visited.visit( pcells[0]);
 
       playerKeys = 0;
@@ -182,14 +182,14 @@ function canvasApp() {
          if (tomb.isValid(cellPt)){
             cell = tomb.getCell(cellPt.x,cellPt.y);
             if (cell.character != null && cell.character.isPlayerControlled()){
-               setSelected(cell);
-            }else if (selectedPt && selectedPaths){
+               setPlayerCell(cell);
+            }else if (playerPt && playerPaths){
                var pathKey = cellPt.toString();
-               if (selectedPaths.hasOwnProperty(pathKey) ){
-                  var path = selectedPaths[pathKey];
-                  var lastPt = selectedPt;
+               if (playerPaths.hasOwnProperty(pathKey) ){
+                  var path = playerPaths[pathKey];
+                  var lastPt = playerPt;
                   for( var i = 0; i < path.length; i++){
-                     var a = new Action( lastPt, path[i], selectedPt.character);
+                     var a = new Action( lastPt, path[i], playerPt.character);
                      actionQueue.push(a);
                      lastPt = path[i];
                   }
@@ -221,14 +221,14 @@ function canvasApp() {
             drawScreen();
             break;
          case STATE_ACTION:
-            handleAction();
+            handleAction(STATE_DEMON, movePlayer);
             drawScreen();
             break;
          case STATE_DEMON:
             log("state demon");
             var demonCells = tomb.getDemonCells();
             if (demonCells.some( function(c){ return c.character.awake;})){
-               demonAction();
+               demonAction(demonCells);
                appState = STATE_DEMON_ACTION;
             }else {
                appState = STATE_PLAYING;
@@ -236,29 +236,56 @@ function canvasApp() {
             drawScreen();
             //fall through
          case STATE_DEMON_ACTION:
+            handleAction(STATE_PLAYING, moveDemon);
             drawScreen();
-            if (actionQueue.length == 0){
-               appState = STATE_PLAYING;
-            }
             break;
       }
    }
    gameLoop();
 
 
-   function setSelected( cell){
-      selectedPt = cell;
-      selectedPaths = tomb.getPaths(cell);
+   function setPlayerCell( cell){
+      playerPt = cell;
+      playerPaths = tomb.getPaths(cell);
    }
 
-   function demonAction(){
-      log("demon action");
+   function demonAction( demonCells ){
+      'use strict';
+      var closestPath = null;
+      var closestDistance = 100;
+      for (var i = 0; i < demonCells.length; i++){
+         var demonCell = demonCells[i];
+         if (demonCell.character.awake){
+            //log( 'getting paths for ' + demonCell);
+            var paths = tomb.getPaths(demonCell);
+            for (var pkey in paths){
+               if (paths.hasOwnProperty(pkey)){
+                  var path = paths[pkey];
+                  //log('checking path ' + path);
+                  var dest = path[ path.length - 1];
+                  var distance = Point.getDistance( playerPt, dest);
+                  if (distance < closestDistance){
+                     closestPath = path;
+                     closestDistance = distance;
+                  }
+               }
+            }
+            if (closestPath){
+               var lastPt = demonCell;
+               for( var j = 0; j < closestPath.length; j++){
+                  var a = new Action( lastPt, closestPath[j], demonCell.character);
+                  actionQueue.push(a);
+                  lastPt = closestPath[j];
+               }
+            }
+         }
+      }
    }
 
-   function move( sourceCell, targetCell){
+   function movePlayer( sourceCell, targetCell){
       targetCell.character = sourceCell.character;
       sourceCell.character = null;
-      setSelected(targetCell);
+      setPlayerCell(targetCell);
       tomb.reveal(targetCell);
       visited.visit(targetCell);
       if (targetCell.key){
@@ -266,7 +293,13 @@ function canvasApp() {
          playerKeys++;
       }
    }
-   function handleAction(){
+
+   function moveDemon( sourceCell, targetCell){
+      targetCell.character = sourceCell.character;
+      sourceCell.character = null;
+   }
+
+   function handleAction(nextState, moveFunc){
       if (currentAction == null && actionQueue.length > 0){
          currentAction = actionQueue.shift();
          //log('current action now ' + currentAction);
@@ -281,13 +314,13 @@ function canvasApp() {
                var targetCell = tomb.getCell( currentAction.targetPt.x, currentAction.targetPt.y);
                if (targetCell){
                   //Move the character from source into target
-                  move(sourceCell, targetCell);
+                  moveFunc(sourceCell, targetCell);
                }
             }
             currentAction = null;
          }
       }else if (actionQueue.length == 0){
-         appState = STATE_PLAYING;
+         appState = nextState;
       }
    }
 
@@ -352,7 +385,7 @@ function canvasApp() {
                draw(tombTileSheet, BORDER_TILE, actual);
                
                //draw indicators along side
-               if (x == 0 && y > 0 && y < (height - 1)){
+               if (x == 0 && y > 1 && y < (height - 2)){
                   var rowToShow = y - 1;
                   var indicator = 100;
                   if (visited.hasRow( rowToShow)){
@@ -360,7 +393,7 @@ function canvasApp() {
                   }
                   draw(tombTileSheet, NUMBER_TILES[indicator], actual);    
                //draw indicators along top
-               }else if (y == 0 && x > 0 && x < (width - 1)){
+               }else if (y == 0 && x > 1 && x < (width - 2)){
                   var colToShow = x - 1;
                   var indicator = 100;
                   if (visited.hasCol(colToShow)){
@@ -396,9 +429,9 @@ function canvasApp() {
       if (tomb.isValid(hoverPt)){
          var actual = cellToActual( hoverPt);
          var pathKey = hoverPt.toString();
-         if (tomb.isValid(selectedPt)){
-            if (selectedPaths &&
-                  selectedPaths.hasOwnProperty(pathKey) ){
+         if (tomb.isValid(playerPt)){
+            if (playerPaths &&
+                  playerPaths.hasOwnProperty(pathKey) ){
                tile = HOVER_TILE;
             }
          }
@@ -409,8 +442,8 @@ function canvasApp() {
    }
 
    function drawSelected(){
-      if (tomb.isValid( selectedPt)){
-         var actual = cellToActual(selectedPt);
+      if (tomb.isValid( playerPt)){
+         var actual = cellToActual(playerPt);
          draw(tombTileSheet, SELECTED_TILE, actual);
       }
    }

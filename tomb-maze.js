@@ -152,9 +152,9 @@ TombCell.prototype.toString = function(){
    return "[Cell:" + this.x + "," + this.y + "]";
 }
 
-TombCell.prototype.canPass = function() {
+TombCell.prototype.canPass = function( character) {
    return this.structure == TombCell.EMPTY && 
-      (this.character == null || this.character.playerControlled);
+      (this.character == null || (this.character.playerControlled == character.playerControlled));
 }
 
 TombCell.EMPTY = 0;
@@ -281,7 +281,6 @@ Tomb.prototype.addDemons = function( numToAdd){
 Tomb.prototype.getPaths = function(fromPt){
    'use strict';
    var fromCell = this.getCell(fromPt.x,fromPt.y);
-   log(fromCell);
    if (fromCell.character == null){
       throw "getPaths called on null cell character";
    }
@@ -298,7 +297,7 @@ Tomb.prototype.getPaths = function(fromPt){
             var newCell = tomb.getCell(newPt.x,newPt.y);
             if (!paths.hasOwnProperty( newPt.toString()) &&
                   !newPt.equals(fromPt) &&
-                  newCell.canPass()){
+                  newCell.canPass(fromCell.character)){
                newPath = pathToExtend.slice(0);
                newPath.push( newPt);
                //log('adding path for ' + newPt + ' length ' + newPath.length);

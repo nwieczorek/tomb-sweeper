@@ -80,4 +80,7 @@ Point.getDirection = function( origin, target){
    }
    return null;
 }
+Point.getDistance = function( origin, target){
+   return Math.abs( origin.x - target.x) + Math.abs(origin.y - target.y);
+}
 
